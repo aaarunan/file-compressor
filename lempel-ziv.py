@@ -1,57 +1,73 @@
 import re
+from sys import byteorder
+import tqdm
 
-window_size = 32 * 1024
+window_size = 32 * 1024 
+
+window = bytearray()
+buffer = bytearray()
 
 
-def add_to_buffer(search_buffer, byte):
-    if len(search_buffer) >= window_size:
-        search_buffer.pop()
-    search_buffer.append(int.from_bytes(byte, byteorder="big"))
+def add_to_window(byte):
+    if len(window) >= window_size:
+        window.pop()
+    window.append(byte)
+    #window.append(int.from_bytes(byte, byteorder="big"))
 
 
 def compress(file_in, file_out) -> None:
-    search_buffer = bytearray()
-    with open(file_in, "rb") as f_in, open(file_out, "wb") as f_out:
+    with open(file_in, "rb") as f_in:
         while byte := f_in.read(1):
-            add_to_buffer(search_buffer, byte)
-            f_out.write(byte)
+            buffer.append(int.from_bytes(byte, byteorder='big'))
 
-            if byte not in search_buffer:
+
+    with open(file_out, "wb") as f_out:
+        iterator =  enumerate(tqdm.tqdm(buffer))
+        for index, byte in iterator:
+            add_to_window(byte)
+            f_out.write(byte.to_bytes(1, byteorder='big'))
+
+            if byte not in window:
                 continue
+            (start, matches) = findLongestMatch(index)
 
-            start = 0
-
-            temp_array = bytearray(byte)
-            matches = 0
-            start = 0
-            while byte1 := f_in.read(1):
-                temp_array.append(int.from_bytes(byte1, byteorder="big"))
-                for index, target in enumerate(search_buffer):
-                    if target != temp_array[0]:
-                        continue
-                    temp = find_length(index, temp_array, search_buffer)
-                    if temp > matches:
-                        matches = temp
-                        start = index
-            for byte1 in temp_array:
-                add_to_buffer(search_buffer, byte1.to_bytes(1, byteorder='big'))
-
-            print(matches)
-            if matches != 0:
-                f_out.write(start)
-                f_out.write(matches)
+            if matches is not None:
+                f_out.write(start.to_bytes(1, byteorder='big'))
+                f_out.write(matches.to_bytes(1, byteorder='big'))
+                for _ in range(matches):
+                    next(iterator)
 
 
-def find_length(offset, temp_array, search_buffer):
-    matches = 0
-    for index in range(1, len(temp_array) - 1):
-        if index+offset < len(search_buffer) and temp_array[index] == search_buffer[index + offset]:
-            matches += 1
-    return matches
+def findLongestMatch(current_position):
+    end_of_buffer = min(current_position + window_size, len(buffer) + 1)
+
+    best_match_distance = -1
+    best_match_length = -1
+
+    for j in range(current_position + 2, end_of_buffer):
+
+        start_index = max(0, current_position - window_size)
+        substring = buffer[current_position:j]
+
+        for i in range(start_index, current_position):
+
+            repetitions = len(substring) // (current_position - i)
+
+            last = len(substring) % (current_position - i)
+
+            matched_string = buffer[i:current_position] * repetitions + buffer[i:i+last]
+
+            if matched_string == substring and len(substring) > best_match_length:
+                best_match_distance = current_position - i 
+                best_match_length = len(substring)
+
+    if best_match_distance > 0 and best_match_length > 0:
+        return (best_match_distance, best_match_length)
+    return (None, None)
 
 
 def main():
-    compress("files/empty.txt", "files/lz-output")
+    compress("files/diverse.txt", "files/lz-output")
 
 
 if __name__ == "__main__":
