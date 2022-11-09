@@ -3,12 +3,14 @@ import huffman
 import sys
 
 i = 1
+failed = False
 
-if len(sys.argv) == 1:
+if len(sys.argv) == 1 or ((len(sys.argv)-1) % 3 != 0):
     print("[COMPRESS/DECOMPRESS] INPUT FILE OUTPUT FILE")
     print("[-c compress] [-d decompress]\n")
+    failed = True
 
-while i < len(sys.argv) - 2:
+while i < len(sys.argv) - 2 and failed == False:
     arg = sys.argv[i]
     i += 1
     arg2 = sys.argv[i]

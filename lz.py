@@ -2,7 +2,7 @@ import tqdm
 from collections import deque
 
 MAX_SEARCH_LENGTH = 127
-MIN_COMMON_SUBSTRING_LENGTH = 5
+MIN_COMMON_SUBSTRING_LENGTH = 6
 
 
 class SearchBuffer(deque):
@@ -86,7 +86,7 @@ def compress(file_path_in: str, file_path_out: str) -> None:
                 data, buffer, current_byte, i
             )
 
-            if length > 5:
+            if length > MIN_COMMON_SUBSTRING_LENGTH:
                 f_out.write(_signed_int_to_byte(-(i - last)))
                 while last < i:
                     f_out.write(_int_to_byte(data[last]))
