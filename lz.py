@@ -13,7 +13,6 @@ class SearchBuffer(deque):
             self.popleft()
         super().append(x)
 
-
 def _signed_int_to_byte(num: int) -> bytes:
     return num.to_bytes(1, byteorder="big", signed=True)
 
